@@ -477,12 +477,11 @@ def segment_text(text: str) -> list:
     return [(c, l) for c, l in merged] if merged else [('', 'en')]
 
 def build_voice_keyboard(gender: str) -> InlineKeyboardMarkup:
-    male_label  = "✅ 👨 សំឡេងប្រុស" if gender == "male"   else "👨 សំឡេងប្រុស"
-    female_label = "✅ 👩 សំឡេងស្រី"  if gender == "female" else "👩 សំឡេងស្រី"
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton(male_label,  callback_data="voice:male"),
-        InlineKeyboardButton(female_label, callback_data="voice:female"),
-    ]])
+    if gender == "male":
+        buttons = [InlineKeyboardButton("👩 សំឡេងស្រី", callback_data="voice:female")]
+    else:
+        buttons = [InlineKeyboardButton("👨 សំឡេងប្រុស", callback_data="voice:male")]
+    return InlineKeyboardMarkup([buttons])
 
 def detect_language(text: str) -> str:
     # 1. Try script-based detection first (instant & reliable)
