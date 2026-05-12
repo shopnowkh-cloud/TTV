@@ -12,8 +12,8 @@ import imageio_ffmpeg
 _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 from langdetect import detect as langdetect_detect, detect_langs, DetectorFactory
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, constants
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, constants
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from telegram.request import HTTPXRequest
 
 def strip_unspeakable(text: str) -> str:
@@ -476,10 +476,13 @@ def segment_text(text: str) -> list:
 
     return [(c, l) for c, l in merged] if merged else [('', 'en')]
 
-KEYBOARD = ReplyKeyboardMarkup(
-    [[KeyboardButton("👨 សំឡេងប្រុស"), KeyboardButton("👩 សំឡេងស្រី")]],
-    resize_keyboard=True
-)
+def build_voice_keyboard(gender: str) -> InlineKeyboardMarkup:
+    male_label  = "✅ 👨 សំឡេងប្រុស" if gender == "male"   else "👨 សំឡេងប្រុស"
+    female_label = "✅ 👩 សំឡេងស្រី"  if gender == "female" else "👩 សំឡេងស្រី"
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(male_label,  callback_data="voice:male"),
+        InlineKeyboardButton(female_label, callback_data="voice:female"),
+    ]])
 
 def detect_language(text: str) -> str:
     # 1. Try script-based detection first (instant & reliable)
@@ -596,7 +599,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '<tg-emoji emoji-id="5471978009449731768">👉</tg-emoji><i>គ្រាន់តែ សរសេរអក្សរណាមួយ ហើយ ខ្ញុំនឹងបំប្លែងជាសំឡេងដោយស្វ័យប្រវត្តិ។</i>',
         parse_mode='HTML',
         message_effect_id="5104841245755180586",
-        reply_markup=KEYBOARD
+    )
+
+async def handle_gender_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    gender = query.data.split(":")[1]
+    set_gender(query.from_user.id, gender)
+    await query.edit_message_reply_markup(
+        reply_markup=build_voice_keyboard(gender)
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -608,27 +619,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mark_user_known(user.id)
         asyncio.create_task(notify_admin_new_user(context.bot, user))
 
-    text = update.message.text
-
-    if text == "👨 សំឡេងប្រុស":
-        set_gender(update.effective_user.id, "male")
-        await update.message.reply_text(
-            '<tg-emoji emoji-id="5805174945138872447">✅</tg-emoji> <b>បានប្តូរទៅ 👨 សំឡេងប្រុស</b>',
-            parse_mode='HTML',
-            reply_markup=KEYBOARD
-        )
-        return
-
-    if text == "👩 សំឡេងស្រី":
-        set_gender(update.effective_user.id, "female")
-        await update.message.reply_text(
-            '<tg-emoji emoji-id="5805174945138872447">✅</tg-emoji> <b>បានប្តូរទៅ 👩 សំឡេងស្រី</b>',
-            parse_mode='HTML',
-            reply_markup=KEYBOARD
-        )
-        return
-
-    text = text.strip()
+    text = update.message.text.strip()
 
     # Segment text by language (handles single and mixed-language texts)
     segments = segment_text(text)
@@ -648,11 +639,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logging.info(f"Segments: {[(c[:12]+'…' if len(c)>12 else c, l) for c,l in segments]} | Cache: {'HIT' if cached_file_id else 'MISS'}")
 
+    keyboard = build_voice_keyboard(gender)
+
     try:
         if cached_file_id:
             await update.message.reply_voice(
                 voice=cached_file_id,
-                reply_markup=KEYBOARD,
+                reply_markup=keyboard,
             )
         else:
             asyncio.create_task(
@@ -668,14 +661,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             msg = await update.message.reply_voice(
                 voice=audio_buf,
-                reply_markup=KEYBOARD,
+                reply_markup=keyboard,
             )
             _cache_set(cache_key, msg.voice.file_id)
     except Exception as e:
         logging.error(f"Error synthesizing voice: {e}")
         await update.message.reply_text(
             "⚠️ មានបញ្ហាក្នុងការបង្កើតសំឡេង។ សូមព្យាយាមម្តងទៀត។",
-            reply_markup=KEYBOARD,
         )
 
 def create_app():
@@ -695,6 +687,7 @@ def create_app():
         .build()
     )
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(handle_gender_callback, pattern="^voice:"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_error_handler(error_handler)
     return application
