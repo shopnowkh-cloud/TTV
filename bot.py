@@ -656,9 +656,12 @@ async def handle_set_speed_callback(update: Update, context: ContextTypes.DEFAUL
     query = update.callback_query
     new_speed = query.data.split(":")[1]
     set_speed(query.from_user.id, new_speed)
-    gender = get_gender(query.from_user.id)
     await query.answer()
-    await query.edit_message_reply_markup(reply_markup=None)
+    await query.edit_message_text(
+        f'<tg-emoji emoji-id="6217467173917429904">✅</tg-emoji> <b>បានផ្លាស់ប្តូរល្បឿនទៅ {new_speed}</b>',
+        parse_mode="HTML",
+        reply_markup=build_speed_select_keyboard()
+    )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
