@@ -92,7 +92,12 @@ def set_gender(user_id: int, gender: str):
     _save_prefs()
 
 def get_speed(user_id: int) -> str:
-    return _user_prefs.get(f"{user_id}_speed", "x1")
+    speed = _user_prefs.get(f"{user_id}_speed", "x1")
+    if speed not in SPEED_RATES:
+        speed = "x1"
+        _user_prefs[f"{user_id}_speed"] = speed
+        _save_prefs()
+    return speed
 
 def set_speed(user_id: int, speed: str):
     _user_prefs[f"{user_id}_speed"] = speed
