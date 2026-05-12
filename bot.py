@@ -615,7 +615,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             '<tg-emoji emoji-id="5805174945138872447">✅</tg-emoji> <b>បានប្តូរទៅ 👨 សំឡេងប្រុស</b>',
             parse_mode='HTML',
-            reply_to_message_id=update.message.message_id,
             reply_markup=KEYBOARD
         )
         return
@@ -625,7 +624,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             '<tg-emoji emoji-id="5805174945138872447">✅</tg-emoji> <b>បានប្តូរទៅ 👩 សំឡេងស្រី</b>',
             parse_mode='HTML',
-            reply_to_message_id=update.message.message_id,
             reply_markup=KEYBOARD
         )
         return
