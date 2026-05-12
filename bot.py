@@ -645,6 +645,7 @@ def build_speed_select_keyboard() -> InlineKeyboardMarkup:
 async def handle_speed_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    await query.edit_message_reply_markup(reply_markup=None)
     await query.message.reply_text(
         "<b>ជ្រើសរើសល្បឿនសំឡេង:</b>",
         parse_mode="HTML",
