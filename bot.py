@@ -105,6 +105,7 @@ def set_speed(user_id: int, speed: str):
 
 SPEED_RATES  = {"x0.5": "-50%", "x1": "+0%", "x1.5": "+50%", "x2": "+100%"}
 SPEED_LABELS = {"x0.5": "🐢 ល្បឿន x0.5", "x1": "▶️ ល្បឿន x1", "x1.5": "⚡ ល្បឿន x1.5", "x2": "🚀 ល្បឿន x2"}
+SPEED_EMOJI  = {"x0.5": "🐢", "x1": "▶️", "x1.5": "⚡", "x2": "🚀"}
 
 _load_prefs()
 
@@ -496,7 +497,7 @@ def build_voice_keyboard(gender: str, speed: str) -> InlineKeyboardMarkup:
         "👩 ស្រី" if gender == "male" else "👨 ប្រុស",
         callback_data="voice:female" if gender == "male" else "voice:male"
     )
-    speed_btn = InlineKeyboardButton(SPEED_LABELS[speed], callback_data=f"speed:{speed}")
+    speed_btn = InlineKeyboardButton(f"{SPEED_EMOJI[speed]} ល្បឿន", callback_data=f"speed:{speed}")
     return InlineKeyboardMarkup([[gender_btn, speed_btn]])
 
 def detect_language(text: str) -> str:
