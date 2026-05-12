@@ -649,6 +649,7 @@ async def handle_set_speed_callback(update: Update, context: ContextTypes.DEFAUL
     new_speed = query.data.split(":")[1]
     set_speed(query.from_user.id, new_speed)
     await query.answer()
+    await query.message.delete()
     await query.message.reply_text(
         f'<tg-emoji emoji-id="6217467173917429904">✅</tg-emoji> <b>បានផ្លាស់ប្តូរល្បឿនទៅ {new_speed}</b>',
         parse_mode="HTML"
