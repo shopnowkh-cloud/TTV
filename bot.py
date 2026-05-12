@@ -12,7 +12,7 @@ import imageio_ffmpeg
 _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 from langdetect import detect as langdetect_detect, detect_langs, DetectorFactory
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyParameters, constants
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, constants
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from telegram.request import HTTPXRequest
 
@@ -650,14 +650,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logging.info(f"Segments: {[(c[:12]+'…' if len(c)>12 else c, l) for c,l in segments]} | Cache: {'HIT' if cached_file_id else 'MISS'}")
 
-    quote = ReplyParameters(message_id=update.message.message_id)
-
     try:
         if cached_file_id:
             await update.message.reply_voice(
                 voice=cached_file_id,
                 reply_markup=KEYBOARD,
-                reply_parameters=quote
             )
         else:
             asyncio.create_task(
@@ -674,7 +671,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg = await update.message.reply_voice(
                 voice=audio_buf,
                 reply_markup=KEYBOARD,
-                reply_parameters=quote
             )
             _cache_set(cache_key, msg.voice.file_id)
     except Exception as e:
@@ -682,7 +678,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ មានបញ្ហាក្នុងការបង្កើតសំឡេង។ សូមព្យាយាមម្តងទៀត។",
             reply_markup=KEYBOARD,
-            reply_parameters=quote
         )
 
 def create_app():
