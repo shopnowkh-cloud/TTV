@@ -92,15 +92,14 @@ def set_gender(user_id: int, gender: str):
     _save_prefs()
 
 def get_speed(user_id: int) -> str:
-    return _user_prefs.get(f"{user_id}_speed", "normal")
+    return _user_prefs.get(f"{user_id}_speed", "x1")
 
 def set_speed(user_id: int, speed: str):
     _user_prefs[f"{user_id}_speed"] = speed
     _save_prefs()
 
-SPEED_RATES  = {"slow": "-25%", "normal": "+0%", "fast": "+25%"}
-SPEED_LABELS = {"slow": "🐢 ល្បឿន", "normal": "▶️ ល្បឿន", "fast": "⚡ ល្បឿន"}
-SPEED_CYCLE  = {"slow": "normal", "normal": "fast", "fast": "slow"}
+SPEED_RATES  = {"x0.5": "-50%", "x1": "+0%", "x1.5": "+50%", "x2": "+100%"}
+SPEED_LABELS = {"x0.5": "🐢 x0.5", "x1": "▶️ x1", "x1.5": "⚡ x1.5", "x2": "🚀 x2"}
 
 _load_prefs()
 
@@ -624,9 +623,10 @@ async def handle_gender_callback(update: Update, context: ContextTypes.DEFAULT_T
 
 def build_speed_select_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("🐢 យឺត",    callback_data="set_speed:slow"),
-        InlineKeyboardButton("▶️ ធម្មតា", callback_data="set_speed:normal"),
-        InlineKeyboardButton("⚡ លឿន",   callback_data="set_speed:fast"),
+        InlineKeyboardButton("x0.5", callback_data="set_speed:x0.5"),
+        InlineKeyboardButton("x1",   callback_data="set_speed:x1"),
+        InlineKeyboardButton("x1.5", callback_data="set_speed:x1.5"),
+        InlineKeyboardButton("x2",   callback_data="set_speed:x2"),
     ]])
 
 async def handle_speed_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
