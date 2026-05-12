@@ -104,7 +104,7 @@ def set_speed(user_id: int, speed: str):
     _save_prefs()
 
 SPEED_RATES  = {"x0.5": "-50%", "x1": "+0%", "x1.5": "+50%", "x2": "+100%"}
-SPEED_LABELS = {"x0.5": "🐢 x0.5", "x1": "▶️ x1", "x1.5": "⚡ x1.5", "x2": "🚀 x2"}
+SPEED_LABELS = {"x0.5": "🐢 ល្បឿន x0.5", "x1": "▶️ ល្បឿន x1", "x1.5": "⚡ ល្បឿន x1.5", "x2": "🚀 ល្បឿន x2"}
 
 _load_prefs()
 
