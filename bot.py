@@ -648,7 +648,7 @@ async def handle_set_speed_callback(update: Update, context: ContextTypes.DEFAUL
     new_speed = query.data.split(":")[1]
     set_speed(query.from_user.id, new_speed)
     gender = get_gender(query.from_user.id)
-    await query.answer(SPEED_LABELS[new_speed])
+    await query.answer()
     await query.edit_message_reply_markup(reply_markup=None)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
