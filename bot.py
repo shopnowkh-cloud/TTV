@@ -795,14 +795,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mark_user_known(user.id)
         asyncio.create_task(notify_admin_new_user(context.bot, user))
     last_name = user.last_name or user.first_name or "បងប្អូន"
-    # Remove any old persistent reply keyboard first
-    await update.message.reply_text("​", reply_markup=ReplyKeyboardRemove())
     await update.message.reply_text(
         f'<tg-emoji emoji-id="5472055112702629499">👋</tg-emoji> <b>សួស្តី</b> {last_name}\n\n'
         '<b>ខ្ញុំជា Text to voice bot</b>\n\n'
         '<tg-emoji emoji-id="5471978009449731768">👉</tg-emoji><i>គ្រាន់តែ សរសេរអក្សរណាមួយ ហើយ ខ្ញុំនឹងបំប្លែងជាសំឡេងដោយស្វ័យប្រវត្តិ។</i>',
         parse_mode='HTML',
         message_effect_id="5104841245755180586",
+        reply_markup=ReplyKeyboardRemove(),
     )
 
 async def handle_gender_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
