@@ -229,9 +229,11 @@ def apply_all_styles(text: str) -> tuple:
     buttons = []
     for name, fn in STYLES:
         styled = fn(text)
+        # Show styled text on the button (truncate to 40 chars to fit Telegram limits)
+        label = styled[:40] + "…" if len(styled) > 40 else styled
         buttons.append([
             InlineKeyboardButton(
-                f"📋 {name}",
+                label,
                 copy_text=CopyTextButton(text=styled),
             )
         ])
