@@ -503,7 +503,7 @@ def build_voice_keyboard(gender: str, speed: str) -> InlineKeyboardMarkup:
         "ល្បឿន",
         callback_data=f"speed:{speed}",
         style=constants.KeyboardButtonStyle.PRIMARY,
-        icon_custom_emoji_id="5388632425314140043",  # 🔈 custom emoji
+        icon_custom_emoji_id="5445284980978621387",  # 🚀 custom emoji
     )
     return InlineKeyboardMarkup([[gender_btn, speed_btn]])
 
