@@ -3,6 +3,7 @@ import sys
 import json
 import asyncio
 import logging
+import threading
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -28,18 +29,31 @@ async def _process(update_data: dict):
         await application.shutdown()
 
 
+def _run_in_thread(update_data: dict):
+    asyncio.run(_process(update_data))
+
+
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        update_data = None
         try:
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length)
             update_data = json.loads(body)
-            asyncio.run(_process(update_data))
         except Exception as e:
-            logging.error(f"Webhook error: {e}", exc_info=True)
+            logging.error(f"Failed to parse request: {e}", exc_info=True)
+
+        # Reply 200 OK immediately so Telegram never retries
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"OK")
+
+        # Process the update in a background thread
+        # join() keeps the Vercel function alive until synthesis is done
+        if update_data:
+            t = threading.Thread(target=_run_in_thread, args=(update_data,), daemon=True)
+            t.start()
+            t.join(timeout=55)  # Vercel Pro allows up to 60s; hobby gets ~10s
 
     def do_GET(self):
         token_set = bool(os.environ.get("TELEGRAM_BOT_TOKEN"))
