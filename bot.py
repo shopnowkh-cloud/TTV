@@ -494,14 +494,16 @@ def segment_text(text: str) -> list:
 
 def build_voice_keyboard(gender: str, speed: str) -> InlineKeyboardMarkup:
     gender_btn = InlineKeyboardButton(
-        "👩 សំឡេងស្រី" if gender == "male" else "👨 សំឡេងប្រុស",
+        "សំឡេងស្រី" if gender == "male" else "សំឡេងប្រុស",
         callback_data="voice:female" if gender == "male" else "voice:male",
         style=constants.KeyboardButtonStyle.SUCCESS,
+        icon_custom_emoji_id="5472055112702629499",  # 👋 custom emoji (replace with desired ID)
     )
     speed_btn = InlineKeyboardButton(
-        "🚀 ល្បឿន",
+        "ល្បឿន",
         callback_data=f"speed:{speed}",
         style=constants.KeyboardButtonStyle.PRIMARY,
+        icon_custom_emoji_id="5388632425314140043",  # 🔈 custom emoji
     )
     return InlineKeyboardMarkup([[gender_btn, speed_btn]])
 
