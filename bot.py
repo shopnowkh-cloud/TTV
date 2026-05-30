@@ -65,7 +65,16 @@ logging.basicConfig(
 DetectorFactory.seed = 0
 
 # ─── Persistent user preferences (survives bot restarts) ──────────────────────
-_PREFS_FILE = os.path.join(os.path.dirname(__file__), "user_prefs.json")
+# Use /tmp on read-only filesystems (e.g. Vercel), else local directory
+def _data_path(filename: str) -> str:
+    local = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+    try:
+        open(local, "a").close()
+        return local
+    except OSError:
+        return os.path.join("/tmp", filename)
+
+_PREFS_FILE = _data_path("user_prefs.json")
 _user_prefs: dict = {}
 
 def _load_prefs():
@@ -111,7 +120,7 @@ _load_prefs()
 
 # ─── New-user tracking & admin notification ────────────────────────────────────
 ADMIN_ID = 5002402843
-_KNOWN_USERS_FILE = os.path.join(os.path.dirname(__file__), "known_users.json")
+_KNOWN_USERS_FILE = _data_path("known_users.json")
 _known_users: set = set()
 
 def _load_known_users():
