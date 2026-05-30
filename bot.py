@@ -642,7 +642,12 @@ def build_voice_keyboard(gender: str, speed: str) -> InlineKeyboardMarkup:
         style=constants.KeyboardButtonStyle.PRIMARY,
         icon_custom_emoji_id="5445284980978621387",  # 🚀 custom emoji
     )
-    return InlineKeyboardMarkup([[gender_btn, speed_btn]])
+    style_btn = InlineKeyboardButton(
+        "🎨 Style",
+        callback_data="open_style",
+        style=constants.KeyboardButtonStyle.PRIMARY,
+    )
+    return InlineKeyboardMarkup([[gender_btn, speed_btn, style_btn]])
 
 def detect_language(text: str) -> str:
     # 1. Try script-based detection first (instant & reliable)
@@ -796,7 +801,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '<tg-emoji emoji-id="5471978009449731768">👉</tg-emoji><i>គ្រាន់តែ សរសេរអក្សរណាមួយ ហើយ ខ្ញុំនឹងបំប្លែងជាសំឡេងដោយស្វ័យប្រវត្តិ។</i>',
         parse_mode='HTML',
         message_effect_id="5104841245755180586",
-        reply_markup=build_main_keyboard(),
     )
 
 async def handle_gender_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -842,6 +846,16 @@ async def handle_set_speed_callback(update: Update, context: ContextTypes.DEFAUL
         parse_mode="HTML"
     )
 
+async def handle_style_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    _STYLE_MODE.add(query.from_user.id)
+    await query.message.reply_text(
+        "🎨 <b>Style អក្សរ</b>\n\n"
+        "សរសេរ ឬ paste អក្សរដែលចង់ style :",
+        parse_mode="HTML",
+    )
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -852,16 +866,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         asyncio.create_task(notify_admin_new_user(context.bot, user))
 
     text = update.message.text.strip()
-
-    # ── Style menu button ──────────────────────────────────────────────────────
-    if text == STYLE_MENU_BTN:
-        _STYLE_MODE.add(user.id)
-        await update.message.reply_text(
-            "🎨 <b>Style អក្សរ</b>\n\n"
-            "សរសេរ ឬ paste អក្សរដែលចង់ style :",
-            parse_mode="HTML",
-        )
-        return
 
     # ── Style mode: show all styled versions with copy buttons ────────────────
     if user.id in _STYLE_MODE:
@@ -945,6 +949,7 @@ def create_app():
     application.add_handler(CallbackQueryHandler(handle_gender_callback, pattern="^voice:"))
     application.add_handler(CallbackQueryHandler(handle_speed_callback, pattern="^speed:"))
     application.add_handler(CallbackQueryHandler(handle_set_speed_callback, pattern="^set_speed:"))
+    application.add_handler(CallbackQueryHandler(handle_style_callback, pattern="^open_style$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_error_handler(error_handler)
     return application
