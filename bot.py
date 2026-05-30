@@ -699,7 +699,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if cached_file_id:
             await update.message.reply_voice(
                 voice=cached_file_id,
-                caption='<tg-emoji emoji-id="5388632425314140043">🔈</tg-emoji> via @limsovannradybot',
+                caption='<tg-emoji emoji-id="5388632425314140043">🔈</tg-emoji> @limsovannradybot',
                 parse_mode="HTML",
                 reply_markup=keyboard,
             )
@@ -717,7 +717,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             msg = await update.message.reply_voice(
                 voice=audio_buf,
-                caption='<tg-emoji emoji-id="5388632425314140043">🔈</tg-emoji> via @limsovannradybot',
+                caption='<tg-emoji emoji-id="5388632425314140043">🔈</tg-emoji> @limsovannradybot',
                 parse_mode="HTML",
                 reply_markup=keyboard,
             )
