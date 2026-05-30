@@ -12,7 +12,7 @@ import imageio_ffmpeg
 _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 from langdetect import detect as langdetect_detect, detect_langs, DetectorFactory
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, constants
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, constants
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from telegram.request import HTTPXRequest
 
@@ -153,7 +153,85 @@ async def notify_admin_new_user(bot, user):
 
 _load_known_users()
 
-# All available edge-tts voices — male and female per language
+# ─── Persistent reply keyboard ─────────────────────────────────────────────────
+STYLE_MENU_BTN = "🎨 Style អក្សរ"
+
+def build_main_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        [[STYLE_MENU_BTN]],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+# ─── Text style feature ────────────────────────────────────────────────────────
+_STYLE_MODE: set = set()  # user IDs waiting to enter text for styling
+
+def _block(upper_start: int, lower_start: int, digit_start: int | None = None) -> dict:
+    src = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz'
+    dst = ''.join(chr(upper_start + i) for i in range(26)) + \
+          ''.join(chr(lower_start + i) for i in range(26))
+    if digit_start is not None:
+        src += '0123456789'
+        dst += ''.join(chr(digit_start + i) for i in range(10))
+    return str.maketrans(src, dst)
+
+# Bold Sans
+_T_BOLD       = _block(0x1D5D4, 0x1D5EE, 0x1D7EC)
+# Italic Sans
+_T_ITALIC     = _block(0x1D608, 0x1D622)
+# Bold Italic Sans
+_T_BOLDITALIC = _block(0x1D63C, 0x1D656)
+# Bold Script
+_T_SCRIPT     = _block(0x1D4D0, 0x1D4EA)
+# Monospace
+_T_MONO       = _block(0x1D670, 0x1D68A, 0x1D7F6)
+# Fullwidth
+_T_WIDE       = _block(0xFF21, 0xFF41, 0xFF10)
+# Double-struck (with exceptions)
+_DS_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+_DS_UPPER_MAP = [
+    0x1D538,0x1D539,0x2102, 0x1D53B,0x1D53C,0x1D53D,0x1D53E,0x210D,
+    0x1D540,0x1D541,0x1D542,0x1D543,0x1D544,0x2115, 0x1D546,0x2119,
+    0x211A, 0x211D, 0x1D54A,0x1D54B,0x1D54C,0x1D54D,0x1D54E,0x1D54F,
+    0x1D550,0x2124,
+]
+_T_DOUBLE = {ord(c): chr(v) for c, v in zip(_DS_UPPER, _DS_UPPER_MAP)}
+_T_DOUBLE.update({ord('a') + i: chr(0x1D552 + i) for i in range(26)})
+_T_DOUBLE.update({ord('0') + i: chr(0x1D7D8 + i) for i in range(10)})
+# Fraktur (with exceptions)
+_FK_UPPER_MAP = [
+    0x1D504,0x1D505,0x212D, 0x1D507,0x1D508,0x1D509,0x1D50A,0x210C,
+    0x2111, 0x1D50D,0x1D50E,0x1D50F,0x1D510,0x1D511,0x1D512,0x1D513,
+    0x1D514,0x211C, 0x1D516,0x1D517,0x1D518,0x1D519,0x1D51A,0x1D51B,
+    0x1D51C,0x2128,
+]
+_T_FRAKTUR = {ord(c): chr(v) for c, v in zip(_DS_UPPER, _FK_UPPER_MAP)}
+_T_FRAKTUR.update({ord('a') + i: chr(0x1D51E + i) for i in range(26)})
+
+def _apply_combining(text: str, combining: str) -> str:
+    return ''.join(c + combining if c.strip() else c for c in text)
+
+STYLES = [
+    ("𝗕𝗼𝗹𝗱",         lambda t: t.translate(_T_BOLD)),
+    ("𝘐𝘵𝘢𝘭𝘪𝘤",       lambda t: t.translate(_T_ITALIC)),
+    ("𝘽𝙤𝙡𝙙 𝙄𝙩𝙖𝙡𝙞𝙘", lambda t: t.translate(_T_BOLDITALIC)),
+    ("𝓢𝓬𝓻𝓲𝓹𝓽",      lambda t: t.translate(_T_SCRIPT)),
+    ("𝔉𝔯𝔞𝔨𝔱𝔲𝔯",     lambda t: t.translate(_T_FRAKTUR)),
+    ("𝔻𝕠𝕦𝕓𝕝𝕖",      lambda t: t.translate(_T_DOUBLE)),
+    ("𝙼𝚘𝚗𝚘",         lambda t: t.translate(_T_MONO)),
+    ("Ｗｉｄｅ",        lambda t: t.translate(_T_WIDE)),
+    ("S̶t̶r̶i̶k̶e̶",      lambda t: _apply_combining(t, '\u0336')),
+    ("U̲n̲d̲e̲r̲l̲i̲n̲e̲",  lambda t: _apply_combining(t, '\u0332')),
+]
+
+def apply_all_styles(text: str) -> str:
+    lines = []
+    for name, fn in STYLES:
+        styled = fn(text)
+        lines.append(f"{name}\n{styled}")
+    return '\n\n'.join(lines)
+
+# ─── All available edge-tts voices — male and female per language ──────────────
 MALE_VOICES = {
     "af":    "af-ZA-WillemNeural",
     "am":    "am-ET-AmehaNeural",
@@ -658,6 +736,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '<tg-emoji emoji-id="5471978009449731768">👉</tg-emoji><i>គ្រាន់តែ សរសេរអក្សរណាមួយ ហើយ ខ្ញុំនឹងបំប្លែងជាសំឡេងដោយស្វ័យប្រវត្តិ។</i>',
         parse_mode='HTML',
         message_effect_id="5104841245755180586",
+        reply_markup=build_main_keyboard(),
     )
 
 async def handle_gender_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -713,6 +792,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         asyncio.create_task(notify_admin_new_user(context.bot, user))
 
     text = update.message.text.strip()
+
+    # ── Style menu button ──────────────────────────────────────────────────────
+    if text == STYLE_MENU_BTN:
+        _STYLE_MODE.add(user.id)
+        await update.message.reply_text(
+            "🎨 <b>Style អក្សរ</b>\n\n"
+            "សរសេរ ឬ paste អក្សរដែលចង់ style :",
+            parse_mode="HTML",
+        )
+        return
+
+    # ── Style mode: show all styled versions ──────────────────────────────────
+    if user.id in _STYLE_MODE:
+        _STYLE_MODE.discard(user.id)
+        result = apply_all_styles(text)
+        await update.message.reply_text(result)
+        return
 
     # Segment text by language (handles single and mixed-language texts)
     segments = segment_text(text)
