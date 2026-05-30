@@ -12,7 +12,7 @@ import imageio_ffmpeg
 _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 from langdetect import detect as langdetect_detect, detect_langs, DetectorFactory
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, constants
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, CopyTextButton, constants
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from telegram.request import HTTPXRequest
 
@@ -224,12 +224,20 @@ STYLES = [
     ("U̲n̲d̲e̲r̲l̲i̲n̲e̲",  lambda t: _apply_combining(t, '\u0332')),
 ]
 
-def apply_all_styles(text: str) -> str:
+def apply_all_styles(text: str) -> tuple:
+    """Return (message_text, InlineKeyboardMarkup) with copy buttons for each style."""
     lines = []
+    buttons = []
     for name, fn in STYLES:
         styled = fn(text)
         lines.append(f"{name}\n{styled}")
-    return '\n\n'.join(lines)
+        buttons.append([
+            InlineKeyboardButton(
+                f"📋 {name}",
+                copy_text=CopyTextButton(text=styled),
+            )
+        ])
+    return '\n\n'.join(lines), InlineKeyboardMarkup(buttons)
 
 # ─── All available edge-tts voices — male and female per language ──────────────
 MALE_VOICES = {
@@ -803,11 +811,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ── Style mode: show all styled versions ──────────────────────────────────
+    # ── Style mode: show all styled versions with copy buttons ────────────────
     if user.id in _STYLE_MODE:
         _STYLE_MODE.discard(user.id)
-        result = apply_all_styles(text)
-        await update.message.reply_text(result)
+        result_text, result_kb = apply_all_styles(text)
+        await update.message.reply_text(result_text, reply_markup=result_kb)
         return
 
     # Segment text by language (handles single and mixed-language texts)
