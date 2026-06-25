@@ -696,21 +696,26 @@ async def handle_gender_callback(update: Update, context: ContextTypes.DEFAULT_T
         # Tapped on the confirmation message → edit it in place (no buttons)
         await query.edit_message_text(conf_text, parse_mode='HTML')
 
-def build_speed_select_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton("x0.5", callback_data="set_speed:x0.5"),
-        InlineKeyboardButton("x1",   callback_data="set_speed:x1"),
-        InlineKeyboardButton("x1.5", callback_data="set_speed:x1.5"),
-        InlineKeyboardButton("x2",   callback_data="set_speed:x2"),
-    ]])
+def build_speed_select_keyboard(current_speed: str = "x1") -> InlineKeyboardMarkup:
+    speeds = ["x0.5", "x1", "x1.5", "x2"]
+    buttons = [
+        InlineKeyboardButton(
+            s,
+            callback_data=f"set_speed:{s}",
+            style=constants.KeyboardButtonStyle.SUCCESS if s == current_speed else constants.KeyboardButtonStyle.PRIMARY,
+        )
+        for s in speeds
+    ]
+    return InlineKeyboardMarkup([buttons])
 
 async def handle_speed_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    current_speed = get_speed(query.from_user.id)
     await query.message.reply_text(
         "<b>ជ្រើសរើសល្បឿនសំឡេង:</b>",
         parse_mode="HTML",
-        reply_markup=build_speed_select_keyboard()
+        reply_markup=build_speed_select_keyboard(current_speed)
     )
 
 async def handle_set_speed_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

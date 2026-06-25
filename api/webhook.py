@@ -45,20 +45,22 @@ class handler(BaseHTTPRequestHandler):
 
         # Reply 200 OK immediately so Telegram never retries
         self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write(b"OK")
 
-        # Process the update in a background thread
-        # join() keeps the Vercel function alive until synthesis is done
+        # Process the update in a background thread.
+        # join() keeps the Vercel function alive until synthesis is done.
         if update_data:
             t = threading.Thread(target=_run_in_thread, args=(update_data,), daemon=True)
             t.start()
-            t.join(timeout=55)  # Vercel Pro allows up to 60s; hobby gets ~10s
+            t.join(timeout=55)
 
     def do_GET(self):
         token_set = bool(os.environ.get("TELEGRAM_BOT_TOKEN"))
         status = "OK" if token_set else "ERROR: TELEGRAM_BOT_TOKEN not set"
         self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write(f"Telegram TTS Bot | Status: {status}".encode())
 
