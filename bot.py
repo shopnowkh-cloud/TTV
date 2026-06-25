@@ -12,7 +12,7 @@ import imageio_ffmpeg
 _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 from langdetect import detect as langdetect_detect, detect_langs, DetectorFactory
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, CopyTextButton, constants
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, constants
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from telegram.request import HTTPXRequest
 
@@ -172,124 +172,6 @@ def build_main_keyboard() -> ReplyKeyboardMarkup:
         is_persistent=True,
     )
 
-# ─── Text style feature ────────────────────────────────────────────────────────
-_STYLE_MODE: set = set()  # user IDs waiting to enter text for styling
-
-def _block(upper_start: int, lower_start: int, digit_start: int | None = None) -> dict:
-    src = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz'
-    dst = ''.join(chr(upper_start + i) for i in range(26)) + \
-          ''.join(chr(lower_start + i) for i in range(26))
-    if digit_start is not None:
-        src += '0123456789'
-        dst += ''.join(chr(digit_start + i) for i in range(10))
-    return str.maketrans(src, dst)
-
-# Bold Sans
-_T_BOLD       = _block(0x1D5D4, 0x1D5EE, 0x1D7EC)
-# Italic Sans
-_T_ITALIC     = _block(0x1D608, 0x1D622)
-# Bold Italic Sans
-_T_BOLDITALIC = _block(0x1D63C, 0x1D656)
-# Bold Script
-_T_SCRIPT     = _block(0x1D4D0, 0x1D4EA)
-# Monospace
-_T_MONO       = _block(0x1D670, 0x1D68A, 0x1D7F6)
-# Fullwidth
-_T_WIDE       = _block(0xFF21, 0xFF41, 0xFF10)
-# Double-struck (with exceptions)
-_DS_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-_DS_UPPER_MAP = [
-    0x1D538,0x1D539,0x2102, 0x1D53B,0x1D53C,0x1D53D,0x1D53E,0x210D,
-    0x1D540,0x1D541,0x1D542,0x1D543,0x1D544,0x2115, 0x1D546,0x2119,
-    0x211A, 0x211D, 0x1D54A,0x1D54B,0x1D54C,0x1D54D,0x1D54E,0x1D54F,
-    0x1D550,0x2124,
-]
-_T_DOUBLE = {ord(c): chr(v) for c, v in zip(_DS_UPPER, _DS_UPPER_MAP)}
-_T_DOUBLE.update({ord('a') + i: chr(0x1D552 + i) for i in range(26)})
-_T_DOUBLE.update({ord('0') + i: chr(0x1D7D8 + i) for i in range(10)})
-# Fraktur (with exceptions)
-_FK_UPPER_MAP = [
-    0x1D504,0x1D505,0x212D, 0x1D507,0x1D508,0x1D509,0x1D50A,0x210C,
-    0x2111, 0x1D50D,0x1D50E,0x1D50F,0x1D510,0x1D511,0x1D512,0x1D513,
-    0x1D514,0x211C, 0x1D516,0x1D517,0x1D518,0x1D519,0x1D51A,0x1D51B,
-    0x1D51C,0x2128,
-]
-_T_FRAKTUR = {ord(c): chr(v) for c, v in zip(_DS_UPPER, _FK_UPPER_MAP)}
-_T_FRAKTUR.update({ord('a') + i: chr(0x1D51E + i) for i in range(26)})
-
-# Small Caps
-_SC_SRC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-_SC_DST = 'ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘqʀꜱᴛᴜᴠᴡxʏᴢᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘqʀꜱᴛᴜᴠᴡxʏᴢ'
-_T_SMALLCAPS = str.maketrans(_SC_SRC, _SC_DST)
-
-# Superscript
-_SUP_SRC = 'abcdefghijklmnoprstuvwxyz0123456789'
-_SUP_DST = 'ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ⁰¹²³⁴⁵⁶⁷⁸⁹'
-_T_SUPER = str.maketrans(_SUP_SRC, _SUP_DST)
-
-def _apply_combining(text: str, combining: str) -> str:
-    return ''.join(c + combining if c.strip() else c for c in text)
-
-def _bubble(text: str) -> str:
-    result = []
-    for c in text:
-        if 'A' <= c <= 'Z':
-            result.append(chr(0x24B6 + ord(c) - ord('A')))
-        elif 'a' <= c <= 'z':
-            result.append(chr(0x24D0 + ord(c) - ord('a')))
-        elif '1' <= c <= '9':
-            result.append(chr(0x2460 + ord(c) - ord('1')))
-        elif c == '0':
-            result.append('⓪')
-        else:
-            result.append(c)
-    return ''.join(result)
-
-def _filled_bubble(text: str) -> str:
-    result = []
-    for c in text:
-        if 'A' <= c <= 'Z':
-            result.append(chr(0x1F150 + ord(c) - ord('A')))
-        elif 'a' <= c <= 'z':
-            result.append(chr(0x1F150 + ord(c.upper()) - ord('A')))
-        else:
-            result.append(c)
-    return ''.join(result)
-
-STYLES = [
-    ("𝗕𝗼𝗹𝗱",           lambda t: t.translate(_T_BOLD)),
-    ("𝘐𝘵𝘢𝘭𝘪𝘤",         lambda t: t.translate(_T_ITALIC)),
-    ("𝘽𝙤𝙡𝙙 𝙄𝙩𝙖𝙡𝙞𝙘",   lambda t: t.translate(_T_BOLDITALIC)),
-    ("𝓢𝓬𝓻𝓲𝓹𝓽",        lambda t: t.translate(_T_SCRIPT)),
-    ("𝔉𝔯𝔞𝔨𝔱𝔲𝔯",       lambda t: t.translate(_T_FRAKTUR)),
-    ("𝔻𝕠𝕦𝕓𝕝𝕖",        lambda t: t.translate(_T_DOUBLE)),
-    ("𝙼𝚘𝚗𝚘",           lambda t: t.translate(_T_MONO)),
-    ("Ｗｉｄｅ",          lambda t: t.translate(_T_WIDE)),
-    ("ꜱᴍᴀʟʟ ᴄᴀᴘꜱ",    lambda t: t.translate(_T_SMALLCAPS)),
-    ("ˢᵘᵖᵉʳˢᶜʳⁱᵖᵗ",   lambda t: t.translate(_T_SUPER)),
-    ("Ⓑⓤⓑⓑⓛⓔ",       _bubble),
-    ("🅵🅸🅻🅻🅴🅳",      _filled_bubble),
-    ("O̅v̅e̅r̅l̅i̅n̅e̅",    lambda t: _apply_combining(t, '\u0305')),
-    ("S̶t̶r̶i̶k̶e̶",        lambda t: _apply_combining(t, '\u0336')),
-    ("U̲n̲d̲e̲r̲l̲i̲n̲e̲",    lambda t: _apply_combining(t, '\u0332')),
-    ("Ḋo̊ṫṫėḋ",         lambda t: _apply_combining(t, '\u0307')),
-    ("W̴a̴v̴y̴",           lambda t: _apply_combining(t, '\u0334')),
-]
-
-def apply_all_styles(text: str) -> tuple:
-    """Return (message_text, InlineKeyboardMarkup) with copy buttons for each style."""
-    buttons = []
-    for name, fn in STYLES:
-        styled = fn(text)
-        # Show styled text on the button (truncate to 40 chars to fit Telegram limits)
-        label = styled[:40] + "…" if len(styled) > 40 else styled
-        buttons.append([
-            InlineKeyboardButton(
-                label,
-                copy_text=CopyTextButton(text=styled),
-            )
-        ])
-    return "🎨 <b>ជ្រើសរើស Style ហើយចុច Copy:</b>", InlineKeyboardMarkup(buttons)
 
 # ─── All available edge-tts voices — male and female per language ──────────────
 MALE_VOICES = {
@@ -634,16 +516,15 @@ def build_voice_keyboard(gender: str, speed: str) -> InlineKeyboardMarkup:
     gender_btn = InlineKeyboardButton(
         "👩 សំឡេងស្រី" if gender == "male" else "👨 សំឡេងប្រុស",
         callback_data="voice:female" if gender == "male" else "voice:male",
+        style=constants.KeyboardButtonStyle.SUCCESS,
     )
     speed_btn = InlineKeyboardButton(
         "ល្បឿន",
         callback_data=f"speed:{speed}",
+        style=constants.KeyboardButtonStyle.PRIMARY,
+        icon_custom_emoji_id="5445284980978621387",
     )
-    style_btn = InlineKeyboardButton(
-        "🎨 Style",
-        callback_data="open_style",
-    )
-    return InlineKeyboardMarkup([[gender_btn, speed_btn, style_btn]])
+    return InlineKeyboardMarkup([[gender_btn, speed_btn]])
 
 def detect_language(text: str) -> str:
     # 1. Try script-based detection first (instant & reliable)
@@ -843,16 +724,6 @@ async def handle_set_speed_callback(update: Update, context: ContextTypes.DEFAUL
         parse_mode="HTML"
     )
 
-async def handle_style_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    _STYLE_MODE.add(query.from_user.id)
-    await query.message.reply_text(
-        "🎨 <b>Style អក្សរ</b>\n\n"
-        "សរសេរ ឬ paste អក្សរដែលចង់ style :",
-        parse_mode="HTML",
-    )
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -863,13 +734,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         asyncio.create_task(notify_admin_new_user(context.bot, user))
 
     text = update.message.text.strip()
-
-    # ── Style mode: show all styled versions with copy buttons ────────────────
-    if user.id in _STYLE_MODE:
-        _STYLE_MODE.discard(user.id)
-        result_text, result_kb = apply_all_styles(text)
-        await update.message.reply_text(result_text, reply_markup=result_kb)
-        return
 
     # Segment text by language (handles single and mixed-language texts)
     segments = segment_text(text)
@@ -946,7 +810,6 @@ def create_app():
     application.add_handler(CallbackQueryHandler(handle_gender_callback, pattern="^voice:"))
     application.add_handler(CallbackQueryHandler(handle_speed_callback, pattern="^speed:"))
     application.add_handler(CallbackQueryHandler(handle_set_speed_callback, pattern="^set_speed:"))
-    application.add_handler(CallbackQueryHandler(handle_style_callback, pattern="^open_style$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_error_handler(error_handler)
     return application
