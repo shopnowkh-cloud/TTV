@@ -828,10 +828,11 @@ async def handle_inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE
             else:
                 audio_buf = await synthesize_to_bytes(text, voice, lang=lang, rate=rate)
 
-            # Upload to the user's own private chat to obtain a reusable file_id.
-            # Requires the user to have previously started the bot (/start).
+            # Upload to admin's private chat to obtain a reusable file_id.
+            # User's chat is never touched during search — voice only appears
+            # in the target chat when the user actually taps the inline result.
             msg = await context.bot.send_voice(
-                chat_id=user_id,
+                chat_id=ADMIN_ID,
                 voice=audio_buf,
             )
             file_id = msg.voice.file_id
