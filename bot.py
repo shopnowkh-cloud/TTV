@@ -874,8 +874,12 @@ async def handle_inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Serve audio via HTTP — no message is sent to any chat during search.
     # Voice only appears in the target chat when the user taps the result.
+    # Requires REPLIT_DEV_DOMAIN (polling mode). Not available on Vercel webhook.
     public_host = os.environ.get("REPLIT_DEV_DOMAIN", "")
-    voice_url   = f"https://{public_host}/voice/{audio_key}"
+    if not public_host:
+        await query.answer([], cache_time=5)
+        return
+    voice_url = f"https://{public_host}/voice/{audio_key}"
     title       = text if len(text) <= 50 else text[:50] + "…"
 
     result = InlineQueryResultVoice(
