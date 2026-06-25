@@ -3,3 +3,9 @@ h2>=4.0
 edge-tts>=7.0
 langdetect>=1.0.9
 imageio-ffmpeg>=0.4.0
+edge-tts
+h2
+imageio-ffmpeg
+langdetect
+python-telegram-bot
+telegram
